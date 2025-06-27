@@ -5,4 +5,5 @@
 また、git add　や git commit , git push　する際はvenvディレクトリに記述されたパッケージの情報を入れずに  
 requirements.txtとその他変更があったファイルのみをgithubにアップをお願いします！
 
-
+後はfrontendに移動した後、npm installを実行することをお願いします。  
+特にmediapipeをインストールする必要はないっす。
