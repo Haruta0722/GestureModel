@@ -3,13 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
 import tensorflow as tf
-import os
+import os, json
 
 # モデルファイルのパス
 MODEL_PATH = os.path.join("model", "sign_lstm_model_126d.h5")
 
 # モデル読み込み
 model = tf.keras.models.load_model(MODEL_PATH)
+
+with open("WLASL_v0.3.json", "r") as f:
+    data = json.load(f)
+
+top_100 = sorted(data, key=lambda x: -len(x["instances"]))[:100]
+label_names = [entry["gloss"] for entry in top_100]
 
 SEQUENCE_LENGTH = 30
 FEATURE_SIZE = 126
@@ -43,6 +49,6 @@ def predict_sign(data: KeypointSequence):
     confidence = float(np.max(prediction))
 
     return {
-        "label": predicted_class,
+        "label": label_names[predicted_class],
         "confidence": confidence
     }
