@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Conv1D, BatchNormalization
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 
@@ -27,10 +27,17 @@ y = to_categorical(y, NUM_CLASSES)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 model = Sequential([
-    LSTM(128, return_sequences=True, input_shape=(SEQUENCE_LENGTH, FEATURE_SIZE)),
+    Conv1D(64, kernel_size=3, activation="relu", input_shape=(SEQUENCE_LENGTH, FEATURE_SIZE)),
+    Conv1D(128, kernel_size=3, activation="relu"),
+    BatchNormalization(),
+    Dropout(0.3),
+
+    LSTM(128, return_sequences=True),
     Dropout(0.4),
+
     LSTM(64),
     Dropout(0.3),
+
     Dense(64, activation="relu"),
     Dense(NUM_CLASSES, activation="softmax")
 ])
