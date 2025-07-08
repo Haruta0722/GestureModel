@@ -7,6 +7,14 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const landmarkBuffer = useRef<number[][]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [isCollecting, setIsCollecting] = useState(false);
+  const isCollectingRef = useRef(false);
+
+  const startInference = () => {
+    landmarkBuffer.current = [];
+    setIsCollecting(true);
+    isCollectingRef.current = true;
+  };
 
   function flattenLandmarks(results: any): number[] {
     const right =
@@ -29,7 +37,6 @@ export default function Home() {
           document.body.appendChild(script);
         });
 
-      // 必要なCDNスクリプトを読み込む
       await loadScript(
         "https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js"
       );
@@ -106,34 +113,47 @@ export default function Home() {
         });
       }
 
-      const frameData = flattenLandmarks(results);
-      landmarkBuffer.current.push(frameData);
+      // 推論モード中だけバッファに追加
+      if (isCollectingRef.current) {
+        if (landmarkBuffer.current.length < 30) {
+          const frameData = flattenLandmarks(results);
+          landmarkBuffer.current.push(frameData);
+        }
 
-      if (landmarkBuffer.current.length >= 30) {
-        const payload = { sequence: landmarkBuffer.current };
+        if (landmarkBuffer.current.length === 30) {
+          const payload = { sequence: landmarkBuffer.current };
 
-        fetch("http://localhost:8000/predict", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            console.log("予測ラベル:", data.label, "信頼度:", data.confidence);
+          fetch("http://localhost:8000/predict", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
           })
-          .catch((err) => {
-            console.error("推論リクエスト失敗:", err);
-          });
-
-        landmarkBuffer.current = []; // バッファリセット
+            .then((res) => res.json())
+            .then((data) => {
+              console.log(
+                "予測ラベル:",
+                data.label,
+                "信頼度:",
+                data.confidence
+              );
+            })
+            .catch((err) => {
+              console.error("推論リクエスト失敗:", err);
+            })
+            .finally(() => {
+              landmarkBuffer.current = [];
+              setIsCollecting(false);
+              isCollectingRef.current = false;
+            });
+        }
       }
+
       canvasCtx.restore();
     });
 
     if (videoRef.current) {
-      // ✅ camera_utils.js 読み込み後に使えるようになる
       const Camera = (window as any).Camera;
       const camera = new Camera(videoRef.current, {
         onFrame: async () => {
@@ -161,6 +181,12 @@ export default function Home() {
         height="480"
         style={{ border: "1px solid black" }}
       />
+      <button
+        onClick={startInference}
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        手話を認識する
+      </button>
     </div>
   );
 }
